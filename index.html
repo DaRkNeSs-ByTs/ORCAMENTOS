@@ -4,12 +4,11 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Gerenciador de Serviços</title>
-    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="src/style.css" />
   </head>
   <body>
     <div class="container">
       <h1>Gerenciador de Serviços</h1>
-
       <div class="form-container">
         <h2>Criar Registro</h2>
         <form id="formServico" data-id="">
@@ -31,7 +30,6 @@
                 placeholder="Digite a loja"
                 required
               />
-              .Concurrent
             </div>
           </div>
           <div class="form-row">
@@ -51,6 +49,7 @@
                 id="orcamento"
                 placeholder="R$ 0,00"
                 required
+                pattern="\d+(\.\d{1,2})?"
               />
             </div>
           </div>
@@ -80,7 +79,6 @@
                 <option value="Novembro">Novembro</option>
                 <option value="Dezembro">Dezembro</option>
               </select>
-              <span style="margin: 0 5px">de</span>
               <input
                 type="number"
                 id="anoServico"
@@ -88,6 +86,7 @@
                 min="2000"
                 max="2100"
                 required
+                pattern="\d{4}"
               />
             </div>
           </div>
@@ -150,7 +149,6 @@
               <option value="Novembro">Novembro</option>
               <option value="Dezembro">Dezembro</option>
             </select>
-            <span style="margin: 0 5px">de</span>
             <input
               type="number"
               id="filtroAno"
@@ -207,6 +205,7 @@
             <th>Orçamento</th>
             <th>InfraSpeak</th>
             <th>Mês</th>
+            <th>Ano</th>
             <th>Faturamento</th>
             <th>Situação</th>
             <th>Tipo</th>
@@ -216,10 +215,8 @@
         <tbody id="corpoTabela"></tbody>
       </table>
     </div>
-
-    <!-- Div oculta para renderizar a tabela de impressão/exportação -->
     <div id="tabelaImpressao" style="display: none"></div>
-
-    <script src="script.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+    <script src="src/script.js"></script>
   </body>
 </html>
