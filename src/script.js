@@ -1,13 +1,13 @@
-// Usando o link do PostgreSQL fornecido
 const supabase = window.supabase.createClient(
-  "postgresql://postgres.dgtqgycqwtnfovdrndnx:Bsc3X25%@aws-0-sa-east-1.pooler.supabase.com:6543/postgres"
+  "https://dgtqgycqwtnfovdrndnx.supabase.co", // URL do Supabase
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRndHFneWNxd3RuZm92ZHJuZG54Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM4MDg2NDMsImV4cCI6MjA1OTM4NDY0M30.QwvJXzh-KOeR7HYy2nQqaUWpl8cOqYEBtWDaBbvs4og" // Chave de API do Supabase
 );
 
 let idContador = 1;
 let registros = [];
 let registrosFiltrados = [];
 
-function adicionarRegistro() {
+async function adicionarRegistro() {
   const form = document.getElementById("formServico");
   const id = form.getAttribute("data-id");
 
@@ -29,7 +29,6 @@ function adicionarRegistro() {
   }
 
   const novoRegistro = {
-    id: id ? parseInt(id) : idContador++,
     solicitante,
     loja,
     servico,
@@ -42,75 +41,106 @@ function adicionarRegistro() {
     projetoManutencao
   };
 
-  if (id) {
-    const index = registros.findIndex((r) => r.id === parseInt(id));
-    registros[index] = novoRegistro;
-    alert("Registro atualizado com sucesso!");
-  } else {
-    registros.push(novoRegistro);
-    alert("Registro adicionado com sucesso!");
-  }
+  // Inserir o registro no banco de dados Supabase
+  const { data, error } = await supabase
+    .from('Servicos') // Nome da tabela no Supabase
+    .insert([novoRegistro]);
 
-  form.reset();
-  form.setAttribute("data-id", "");
-  atualizarTabela(registros);
-  filtrarRegistros();
+  if (error) {
+    console.error("Erro ao adicionar registro:", error);
+    alert("Erro ao adicionar o registro.");
+  } else {
+    alert("Registro adicionado com sucesso!");
+    // Resetando o formulário e atualizando a tabela
+    form.reset();
+    form.setAttribute("data-id", "");
+    atualizarTabela();
+    filtrarRegistros();
+  }
 }
 
-function atualizarTabela(filtrados = registros) {
-  registrosFiltrados = filtrados;
-  const tbody = document.getElementById("corpoTabela");
-  tbody.innerHTML = "";
+async function atualizarTabela() {
+  // Recuperar os registros atualizados do Supabase
+  const { data, error } = await supabase
+    .from('Servicos') // Nome da tabela no Supabase
+    .select('*');
 
-  registrosFiltrados.forEach((registro) => {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${registro.id}</td>
-      <td>${registro.solicitante}</td>
-      <td>${registro.loja}</td>
-      <td>${registro.servico}</td>
-      <td>${formatarValorMonetario(registro.orcamento)}</td>
-      <td>${registro.infraSpeak}</td>
-      <td>${registro.mesServico}</td>
-      <td>${registro.anoServico}</td>
-      <td>${registro.faturamento}</td>
-      <td>${registro.situacao}</td>
-      <td>${registro.projetoManutencao}</td>
-      <td>
-        <button class="editar" onclick="editarRegistro(${registro.id})">Editar</button>
-        <button class="remover" onclick="removerRegistro(${registro.id})">Remover</button>
-      </td>
-    `;
-    tbody.appendChild(tr);
-  });
+  if (error) {
+    console.error("Erro ao buscar registros:", error);
+    alert("Erro ao buscar registros.");
+  } else {
+    registros = data;
+    registrosFiltrados = data;
+    const tbody = document.getElementById("corpoTabela");
+    tbody.innerHTML = "";
+
+    registrosFiltrados.forEach((registro) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${registro.id}</td>
+        <td>${registro.solicitante}</td>
+        <td>${registro.loja}</td>
+        <td>${registro.servico}</td>
+        <td>${formatarValorMonetario(registro.orcamento)}</td>
+        <td>${registro.infraSpeak}</td>
+        <td>${registro.mesServico}</td>
+        <td>${registro.anoServico}</td>
+        <td>${registro.faturamento}</td>
+        <td>${registro.situacao}</td>
+        <td>${registro.projetoManutencao}</td>
+        <td>
+          <button class="editar" onclick="editarRegistro(${registro.id})">Editar</button>
+          <button class="remover" onclick="removerRegistro(${registro.id})">Remover</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
 }
 
 function formatarValorMonetario(valor) {
   return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-function editarRegistro(id) {
-  const registro = registros.find((r) => r.id === id);
-  if (!registro) return;
+async function editarRegistro(id) {
+  const { data, error } = await supabase
+    .from('Servicos') // Nome da tabela no Supabase
+    .select('*')
+    .eq('id', id)
+    .single();
 
-  const form = document.getElementById("formServico");
-  form.setAttribute("data-id", id);
-  document.getElementById("solicitante").value = registro.solicitante;
-  document.getElementById("loja").value = registro.loja;
-  document.getElementById("servico").value = registro.servico;
-  document.getElementById("orcamento").value = formatarValorMonetario(registro.orcamento);
-  document.getElementById("InfraSpeak").value = registro.infraSpeak;
-  document.getElementById("mesServico").value = registro.mesServico;
-  document.getElementById("anoServico").value = registro.anoServico;
-  document.getElementById("faturamento").value = registro.faturamento;
-  document.getElementById("situacao").value = registro.situacao;
-  document.getElementById("projetoManutencao").value = registro.projetoManutencao;
+  if (error) {
+    console.error("Erro ao buscar registro para editar:", error);
+    alert("Erro ao buscar registro.");
+  } else {
+    const form = document.getElementById("formServico");
+    form.setAttribute("data-id", data.id);
+    document.getElementById("solicitante").value = data.solicitante;
+    document.getElementById("loja").value = data.loja;
+    document.getElementById("servico").value = data.servico;
+    document.getElementById("orcamento").value = formatarValorMonetario(data.orcamento);
+    document.getElementById("InfraSpeak").value = data.infraSpeak;
+    document.getElementById("mesServico").value = data.mesServico;
+    document.getElementById("anoServico").value = data.anoServico;
+    document.getElementById("faturamento").value = data.faturamento;
+    document.getElementById("situacao").value = data.situacao;
+    document.getElementById("projetoManutencao").value = data.projetoManutencao;
+  }
 }
 
-function removerRegistro(id) {
-  registros = registros.filter((r) => r.id !== id);
-  atualizarTabela();
-  alert("Registro removido com sucesso!");
+async function removerRegistro(id) {
+  const { data, error } = await supabase
+    .from('Servicos') // Nome da tabela no Supabase
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error("Erro ao remover registro:", error);
+    alert("Erro ao remover o registro.");
+  } else {
+    alert("Registro removido com sucesso!");
+    atualizarTabela();
+  }
 }
 
 function filtrarRegistros() {
@@ -146,3 +176,8 @@ function limparFiltros() {
 }
 
 document.getElementById("orcamento").addEventListener("input", formatarValorMonetario);
+
+// Inicializando a tabela com dados do Supabase ao carregar a página
+window.onload = async () => {
+  await atualizarTabela();
+};
