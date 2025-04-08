@@ -1,9 +1,8 @@
-const supabase = window.supabase.createClient(
-  "https://dgtqgycqwtnfovdrndnx.supabase.co", // URL do Supabase
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRndHFneWNxd3RuZm92ZHJuZG54Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM4MDg2NDMsImV4cCI6MjA1OTM4NDY0M30.QwvJXzh-KOeR7HYy2nQqaUWpl8cOqYEBtWDaBbvs4og" // Chave de API do Supabase
-);
+import postgres from 'postgres';
 
-let idContador = 1;
+const connectionString = process.env.DATABASE_URL;
+const sql = postgres(connectionString);
+
 let registros = [];
 let registrosFiltrados = [];
 
@@ -41,29 +40,20 @@ async function adicionarRegistro() {
     projetoManutencao
   };
 
-  // Inserir o registro no banco de dados Supabase
-  const { data, error } = await supabase
-    .from('Servicos') // Nome da tabela no Supabase
-    .insert([novoRegistro]);
-
+  const { data, error } = await sql`INSERT INTO Servicos ${sql(novoRegistro)}`;
   if (error) {
     console.error("Erro ao adicionar registro:", error);
     alert("Erro ao adicionar o registro.");
   } else {
     alert("Registro adicionado com sucesso!");
-    // Resetando o formulário e atualizando a tabela
     form.reset();
     form.setAttribute("data-id", "");
     atualizarTabela();
-    filtrarRegistros();
   }
 }
 
 async function atualizarTabela() {
-  // Recuperar os registros atualizados do Supabase
-  const { data, error } = await supabase
-    .from('Servicos') // Nome da tabela no Supabase
-    .select('*');
+  const { data, error } = await sql`SELECT * FROM Servicos`;
 
   if (error) {
     console.error("Erro ao buscar registros:", error);
@@ -103,11 +93,7 @@ function formatarValorMonetario(valor) {
 }
 
 async function editarRegistro(id) {
-  const { data, error } = await supabase
-    .from('Servicos') // Nome da tabela no Supabase
-    .select('*')
-    .eq('id', id)
-    .single();
+  const { data, error } = await sql`SELECT * FROM Servicos WHERE id = ${id}`;
 
   if (error) {
     console.error("Erro ao buscar registro para editar:", error);
@@ -118,7 +104,7 @@ async function editarRegistro(id) {
     document.getElementById("solicitante").value = data.solicitante;
     document.getElementById("loja").value = data.loja;
     document.getElementById("servico").value = data.servico;
-    document.getElementById("orcamento").value = formatarValorMonetario(data.orcamento);
+    document.getElementById("orcamento").value = data.orcamento;
     document.getElementById("InfraSpeak").value = data.infraSpeak;
     document.getElementById("mesServico").value = data.mesServico;
     document.getElementById("anoServico").value = data.anoServico;
@@ -129,10 +115,7 @@ async function editarRegistro(id) {
 }
 
 async function removerRegistro(id) {
-  const { data, error } = await supabase
-    .from('Servicos') // Nome da tabela no Supabase
-    .delete()
-    .eq('id', id);
+  const { data, error } = await sql`DELETE FROM Servicos WHERE id = ${id}`;
 
   if (error) {
     console.error("Erro ao remover registro:", error);
@@ -175,9 +158,6 @@ function limparFiltros() {
   atualizarTabela();
 }
 
-document.getElementById("orcamento").addEventListener("input", formatarValorMonetario);
-
-// Inicializando a tabela com dados do Supabase ao carregar a página
 window.onload = async () => {
   await atualizarTabela();
 };
