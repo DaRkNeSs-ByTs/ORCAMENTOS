@@ -1,6 +1,6 @@
+// Usando o link do PostgreSQL fornecido
 const supabase = window.supabase.createClient(
-  "https://dgtqgycqwtnfovdrndnx.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRndHFneWNxd3RuZm92ZHJuZG54Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM4MDg2NDMsImV4cCI6MjA1OTM4NDY0M30.QwvJXzh-KOeR7HYy2nQqaUWpl8cOqYEBtWDaBbvs4og"
+  "postgresql://postgres.dgtqgycqwtnfovdrndnx:Bsc3X25%@aws-0-sa-east-1.pooler.supabase.com:6543/postgres"
 );
 
 let idContador = 1;
