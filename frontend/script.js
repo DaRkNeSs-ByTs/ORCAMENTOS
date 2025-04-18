@@ -2,7 +2,7 @@
 const API_URL = (() => {
   const hostname = window.location.hostname;
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    return 'http://localhost:3000';
+    return 'http://localhost:3000/api';
   } else {
     return 'https://orcamentos-ochre.vercel.app/api';
   }
@@ -145,6 +145,45 @@ document.getElementById('orcamento').addEventListener('input', function (e) {
   e.target.value = valor;
 });
 
+// Função para editar registro
+async function editarRegistro(id) {
+  try {
+    const response = await fetch(`${API_URL}/servicos/${id}`);
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Erro ao carregar registro');
+    }
+
+    const registro = await response.json();
+
+    const form = document.getElementById('formServico');
+    form.dataset.id = id;
+
+    document.getElementById('solicitante').value = registro.solicitante;
+    document.getElementById('loja').value = registro.loja;
+    document.getElementById('servico').value = registro.servico;
+    document.getElementById('orcamento').value = registro.orcamento;
+    document.getElementById('InfraSpeak').value = registro.infraSpeak || '';
+    document.getElementById('mesServico').value = registro.mesServico;
+    document.getElementById('anoServico').value = registro.anoServico;
+    document.getElementById('faturamento').value = registro.faturamento || '';
+    document.getElementById('situacao').value = registro.situacao || '';
+    document.getElementById('projetoManutencao').value = registro.projetoManutencao || '';
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  } catch (error) {
+    console.error('Erro ao carregar registro:', error);
+    alert(`Erro ao carregar registro: ${error.message}`);
+  }
+}
+
+// Função para limpar o cache
+function limparCache() {
+  cacheRegistros = null;
+  ultimaAtualizacao = null;
+}
+
 // Função para adicionar/editar registro
 async function adicionarRegistro() {
   console.log('Iniciando adição de registro...');
@@ -227,38 +266,12 @@ async function adicionarRegistro() {
 
     form.reset();
     form.dataset.id = '';
+    limparCache(); // Limpa o cache após adicionar/editar
     await carregarRegistros();
     alert('Registro salvo com sucesso!');
   } catch (error) {
     console.error('Erro detalhado:', error);
     alert(`Erro ao salvar registro: ${error.message}`);
-  }
-}
-
-// Função para editar registro
-async function editarRegistro(id) {
-  try {
-    const response = await fetch(`${API_URL}/servicos/${id}`);
-    const registro = await response.json();
-
-    const form = document.getElementById('formServico');
-    form.dataset.id = id;
-
-    document.getElementById('solicitante').value = registro.solicitante;
-    document.getElementById('loja').value = registro.loja;
-    document.getElementById('servico').value = registro.servico;
-    document.getElementById('orcamento').value = registro.orcamento;
-    document.getElementById('InfraSpeak').value = registro.infraSpeak;
-    document.getElementById('mesServico').value = registro.mesServico;
-    document.getElementById('anoServico').value = registro.anoServico;
-    document.getElementById('faturamento').value = registro.faturamento;
-    document.getElementById('situacao').value = registro.situacao;
-    document.getElementById('projetoManutencao').value = registro.projetoManutencao;
-
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  } catch (error) {
-    console.error('Erro ao carregar registro:', error);
-    alert('Erro ao carregar registro. Por favor, tente novamente.');
   }
 }
 
@@ -292,6 +305,7 @@ async function removerRegistro(id) {
       }
     }
 
+    limparCache(); // Limpa o cache após remover
     await carregarRegistros();
     alert('Registro removido com sucesso!');
   } catch (error) {
