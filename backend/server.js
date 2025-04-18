@@ -12,14 +12,14 @@ app.use(cors({
   origin: ['https://orcamentos-ochre.vercel.app', 'http://localhost:3000'],
   methods: ['GET', 'POST', 'DELETE', 'PUT'],
   credentials: true,
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
 }));
 
 // Configuração do rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
   max: 100, // limite de 100 requisições por IP
-  message: { error: 'Muitas requisições, tente novamente mais tarde' }
+  message: JSON.stringify({ error: 'Muitas requisições, tente novamente mais tarde' })
 });
 app.use(limiter);
 
@@ -29,6 +29,7 @@ app.use(express.json({ limit: '10mb' }));
 // Middleware para garantir respostas JSON
 app.use((req, res, next) => {
   res.setHeader('Content-Type', 'application/json');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
   next();
 });
 
@@ -39,23 +40,21 @@ app.use((req, res, next) => {
 });
 
 // Conectar ao Supabase
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_KEY;
+const supabaseUrl = 'https://dgtqgycqwtnfovdrndnx.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRndHFneWNxd3RuZm92ZHJuZG54Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM4MDg2NDMsImV4cCI6MjA1OTM4NDY0M30.QwvJXzh-KOeR7HYy2nQqaUWpl8cOqYEBtWDaBbvs4og';
 
 console.log('Ambiente:', process.env.NODE_ENV);
 console.log('Supabase URL configurada:', !!supabaseUrl);
 console.log('Supabase Key configurada:', !!supabaseKey);
-
-if (!supabaseUrl || !supabaseKey) {
-  console.error('Erro: Variáveis de ambiente SUPABASE_URL e SUPABASE_KEY não configuradas');
-  process.exit(1);
-}
 
 // Inicialização do cliente Supabase
 const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: false
+  },
+  db: {
+    schema: 'public'
   }
 });
 
@@ -69,6 +68,7 @@ app.get('/api', async (req, res) => {
       .limit(1);
 
     if (error) {
+      console.error('Erro ao testar conexão com Supabase:', error);
       if (error.code === '42P01') { // Tabela não existe
         return res.status(404).json({
           message: 'API funcionando!',

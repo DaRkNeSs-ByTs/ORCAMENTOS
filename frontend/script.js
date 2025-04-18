@@ -1,6 +1,7 @@
 // URL base da API
 const API_URL = (() => {
-  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+  const hostname = window.location.hostname;
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
     return 'http://localhost:3000';
   } else {
     return 'https://orcamentos-ochre.vercel.app/api';
@@ -32,23 +33,30 @@ async function carregarRegistros(pagina = 1) {
   if (loadingIndicator) loadingIndicator.style.display = 'block';
 
   try {
-    console.log('Fazendo requisição para /api/servicos...');
-    const response = await fetch(`${API_URL}/servicos?page=${pagina}&limit=${registrosPorPagina}`, {
+    const url = `${API_URL}/servicos?page=${pagina}&limit=${registrosPorPagina}`;
+    console.log('Fazendo requisição para:', url);
+
+    const response = await fetch(url, {
+      method: 'GET',
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json'
-      }
+      },
+      credentials: 'include'
     });
 
     console.log('Status da resposta:', response.status);
     console.log('Headers da resposta:', Object.fromEntries(response.headers.entries()));
 
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Resposta de erro:', errorText);
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
     const contentType = response.headers.get('content-type');
     if (!contentType || !contentType.includes('application/json')) {
+      console.error('Tipo de conteúdo inesperado:', contentType);
       throw new Error('Resposta não está em formato JSON');
     }
 
@@ -56,6 +64,7 @@ async function carregarRegistros(pagina = 1) {
     console.log('Dados recebidos:', data);
 
     if (!data || !Array.isArray(data.data)) {
+      console.error('Formato de dados inválido:', data);
       throw new Error('Formato de dados inválido');
     }
 
