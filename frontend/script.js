@@ -3,8 +3,8 @@ const API_URL = (() => {
   if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
     return 'http://localhost:3000';
   } else {
-    // URL do seu backend no Vercel
-    return 'https://seu-backend.vercel.app';
+    // URL do backend no Vercel
+    return 'https://orcamentos-ochre.vercel.app';
   }
 })();
 
