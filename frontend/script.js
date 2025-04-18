@@ -14,38 +14,61 @@ console.log('API URL configurada:', API_URL);
 async function carregarRegistros() {
   console.log('Iniciando carregamento de registros...');
   try {
-    console.log('Fazendo requisição para /servicos...');
-    const response = await fetch(`${API_URL}/servicos`);
-    const contentType = response.headers.get('content-type');
+    console.log('Fazendo requisição para /api/servicos...');
+    const response = await fetch(`${API_URL}/servicos`, {
+      headers: {
+        'Accept': 'application/json'
+      }
+    });
+
+    console.log('Status da resposta:', response.status);
+    console.log('Headers da resposta:', Object.fromEntries(response.headers.entries()));
 
     if (!response.ok) {
-      console.error('Erro na resposta:', response.status, response.statusText);
-      const errorData = await response.text();
-      console.error('Resposta de erro completa:', errorData);
+      const contentType = response.headers.get('content-type');
+      let errorMessage;
 
       try {
-        const error = contentType?.includes('application/json') ?
-          JSON.parse(errorData) :
-          { message: `Erro ${response.status}: ${response.statusText}` };
-        throw new Error(error.message || 'Erro desconhecido');
+        const errorText = await response.text();
+        console.log('Resposta de erro completa:', errorText);
+
+        if (contentType?.includes('application/json')) {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.message || `Erro ${response.status}: ${response.statusText}`;
+        } else {
+          errorMessage = `Erro ${response.status}: ${response.statusText}`;
+        }
       } catch (parseError) {
         console.error('Erro ao parsear resposta:', parseError);
-        throw new Error(`Erro ${response.status}: ${response.statusText}`);
+        errorMessage = `Erro ${response.status}: ${response.statusText}`;
       }
+
+      throw new Error(errorMessage);
     }
 
+    const contentType = response.headers.get('content-type');
     if (!contentType?.includes('application/json')) {
+      console.error('Tipo de conteúdo inesperado:', contentType);
       throw new Error('Resposta do servidor não está em formato JSON');
     }
 
-    console.log('Resposta recebida, convertendo para JSON...');
-    const registros = await response.json();
-    console.log(`${registros.length} registros carregados`);
+    const responseText = await response.text();
+    console.log('Resposta recebida:', responseText);
+
+    let registros;
+    try {
+      registros = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('Erro ao parsear JSON:', parseError);
+      throw new Error('Resposta inválida do servidor');
+    }
 
     if (!Array.isArray(registros)) {
+      console.error('Formato de resposta inválido:', registros);
       throw new Error('Formato de resposta inválido: esperava um array de registros');
     }
 
+    console.log(`${registros.length} registros carregados`);
     atualizarTabela(registros);
   } catch (error) {
     console.error('Erro detalhado:', error);
