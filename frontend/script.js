@@ -1,5 +1,5 @@
 // URL base da API
-const API_URL = window.location.origin + '/api';
+const API_URL = window.location.origin;
 
 // Função para carregar os registros
 async function carregarRegistros() {
@@ -126,7 +126,7 @@ async function editarRegistro(id) {
     document.getElementById('solicitante').value = registro.solicitante;
     document.getElementById('loja').value = registro.loja;
     document.getElementById('servico').value = registro.servico;
-    document.getElementById('orcamento').value = formatarMoeda(registro.orcamento);
+    document.getElementById('orcamento').value = registro.orcamento;
     document.getElementById('InfraSpeak').value = registro.infraSpeak;
     document.getElementById('mesServico').value = registro.mesServico;
     document.getElementById('anoServico').value = registro.anoServico;

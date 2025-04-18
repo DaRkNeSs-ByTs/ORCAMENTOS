@@ -12,12 +12,28 @@
   ],
   "routes": [
     {
-      "src": "/api/(.*)",
-      "dest": "backend/server.js"
+      "src": "/servicos",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "dest": "/backend/server.js"
+    },
+    {
+      "src": "/servicos/(.*)",
+      "methods": [
+        "GET",
+        "DELETE"
+      ],
+      "dest": "/backend/server.js"
+    },
+    {
+      "src": "/(.*)\\.(?:js|css|html|png|jpg|ico|svg)$",
+      "dest": "/frontend/$1.$2"
     },
     {
       "src": "/(.*)",
-      "dest": "frontend/$1"
+      "dest": "/frontend/index.html"
     }
   ]
 }
