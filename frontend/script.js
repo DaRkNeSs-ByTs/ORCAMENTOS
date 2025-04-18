@@ -3,19 +3,37 @@ const API_URL = (() => {
   if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
     return 'http://localhost:3000';
   } else {
-    // URL do backend no Vercel
     return 'https://orcamentos-ochre.vercel.app/api';
   }
 })();
 
 console.log('API URL configurada:', API_URL);
 
+let cacheRegistros = null;
+let ultimaAtualizacao = null;
+const TEMPO_CACHE = 5 * 60 * 1000; // 5 minutos
+let paginaAtual = 1;
+const registrosPorPagina = 10;
+
 // Função para carregar os registros
-async function carregarRegistros() {
+async function carregarRegistros(pagina = 1) {
+  const agora = Date.now();
+
+  // Verifica se há cache válido para a página atual
+  if (cacheRegistros?.[pagina] && ultimaAtualizacao && (agora - ultimaAtualizacao) < TEMPO_CACHE) {
+    console.log('Usando cache de registros da página', pagina);
+    atualizarTabela(cacheRegistros[pagina].data);
+    atualizarPaginacao(cacheRegistros[pagina].pagination);
+    return;
+  }
+
   console.log('Iniciando carregamento de registros...');
+  const loadingIndicator = document.getElementById('loadingIndicator');
+  if (loadingIndicator) loadingIndicator.style.display = 'block';
+
   try {
     console.log('Fazendo requisição para /api/servicos...');
-    const response = await fetch(`${API_URL}/servicos`, {
+    const response = await fetch(`${API_URL}/servicos?page=${pagina}&limit=${registrosPorPagina}`, {
       headers: {
         'Accept': 'application/json'
       }
@@ -68,11 +86,17 @@ async function carregarRegistros() {
       throw new Error('Formato de resposta inválido: esperava um array de registros');
     }
 
-    console.log(`${registros.length} registros carregados`);
-    atualizarTabela(registros);
+    console.log(`${registros.data.length} registros carregados`);
+    if (!cacheRegistros) cacheRegistros = {};
+    cacheRegistros[pagina] = registros;
+    ultimaAtualizacao = agora;
+    atualizarTabela(registros.data);
+    atualizarPaginacao(registros.pagination);
   } catch (error) {
     console.error('Erro detalhado:', error);
     alert(`Erro ao carregar registros: ${error.message}`);
+  } finally {
+    if (loadingIndicator) loadingIndicator.style.display = 'none';
   }
 }
 
@@ -245,13 +269,15 @@ async function editarRegistro(id) {
 
 // Função para remover registro
 async function removerRegistro(id) {
+  if (!confirm('Tem certeza que deseja remover este registro?')) {
+    return;
+  }
+
   if (!id || typeof id !== 'number') {
     console.error('ID inválido para remoção:', id);
     alert('ID inválido para remoção do registro.');
     return;
   }
-
-  if (!confirm('Tem certeza que deseja remover este registro?')) return;
 
   try {
     const response = await fetch(`${API_URL}/servicos/${id}`, {
@@ -456,6 +482,32 @@ function exportarRegistros() {
     console.error('Erro ao exportar registros:', error);
     alert('Ocorreu um erro ao exportar os registros. Por favor, tente novamente.');
   }
+}
+
+function atualizarPaginacao(paginacao) {
+  const paginacaoContainer = document.getElementById('paginacao');
+  if (!paginacaoContainer) return;
+
+  let html = '';
+
+  // Botão anterior
+  html += `<button onclick="mudarPagina(${paginacao.page - 1})" ${paginacao.page === 1 ? 'disabled' : ''}>Anterior</button>`;
+
+  // Números das páginas
+  for (let i = 1; i <= paginacao.totalPages; i++) {
+    html += `<button onclick="mudarPagina(${i})" ${i === paginacao.page ? 'class="active"' : ''}>${i}</button>`;
+  }
+
+  // Botão próximo
+  html += `<button onclick="mudarPagina(${paginacao.page + 1})" ${paginacao.page === paginacao.totalPages ? 'disabled' : ''}>Próximo</button>`;
+
+  paginacaoContainer.innerHTML = html;
+}
+
+function mudarPagina(novaPagina) {
+  if (novaPagina < 1 || novaPagina > paginacao.totalPages) return;
+  paginaAtual = novaPagina;
+  carregarRegistros(novaPagina);
 }
 
 // Carregar registros quando a página carregar
