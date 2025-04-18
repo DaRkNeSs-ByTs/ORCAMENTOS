@@ -51,7 +51,16 @@ async function carregarRegistros(pagina = 1) {
     if (!response.ok) {
       const errorText = await response.text();
       console.error('Resposta de erro:', errorText);
-      throw new Error(`HTTP error! status: ${response.status}`);
+      let errorMessage = `Erro HTTP! status: ${response.status}`;
+
+      try {
+        const errorData = JSON.parse(errorText);
+        errorMessage = errorData.message || errorData.error || errorMessage;
+      } catch (e) {
+        console.error('Erro ao parsear resposta de erro:', e);
+      }
+
+      throw new Error(errorMessage);
     }
 
     const contentType = response.headers.get('content-type');

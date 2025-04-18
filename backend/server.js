@@ -115,7 +115,8 @@ app.get('/api/servicos', async (req, res) => {
       console.error('Erro ao buscar registros:', error);
       return res.status(500).json({
         error: 'Erro ao buscar registros',
-        message: error.message
+        message: error.message,
+        details: error.details || null
       });
     }
 
@@ -136,7 +137,8 @@ app.get('/api/servicos', async (req, res) => {
     console.error('Erro ao processar requisição:', error);
     res.status(500).json({
       error: 'Erro interno do servidor',
-      message: error.message
+      message: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 });
@@ -146,11 +148,11 @@ app.post('/api/servicos', async (req, res) => {
   try {
     const { id, ...dados } = req.body;
 
+    // Validação dos campos obrigatórios
     if (!dados.solicitante || !dados.loja || !dados.servico || !dados.orcamento) {
       return res.status(400).json({
-        error: {
-          message: 'Campos obrigatórios faltando'
-        }
+        error: 'Campos obrigatórios faltando',
+        message: 'Os campos solicitante, loja, serviço e orçamento são obrigatórios'
       });
     }
 
@@ -158,16 +160,20 @@ app.post('/api/servicos', async (req, res) => {
       ? await supabase.from('servicos').update(dados).eq('id', id).select().single()
       : await supabase.from('servicos').insert([dados]).select().single();
 
-    if (result.error) throw result.error;
+    if (result.error) {
+      console.error('Erro ao salvar registro:', result.error);
+      return res.status(500).json({
+        error: 'Erro ao salvar registro',
+        message: result.error.message
+      });
+    }
 
     res.status(id ? 200 : 201).json(result.data);
   } catch (error) {
-    console.error('Erro ao salvar registro:', error);
+    console.error('Erro ao processar requisição:', error);
     res.status(500).json({
-      error: {
-        message: 'Erro ao salvar registro',
-        details: error.message
-      }
+      error: 'Erro interno do servidor',
+      message: error.message
     });
   }
 });
@@ -178,43 +184,41 @@ app.delete('/api/servicos/:id', async (req, res) => {
     const { id } = req.params;
     const { error } = await supabase.from('servicos').delete().eq('id', id);
 
-    if (error) throw error;
+    if (error) {
+      console.error('Erro ao remover registro:', error);
+      return res.status(500).json({
+        error: 'Erro ao remover registro',
+        message: error.message
+      });
+    }
 
     res.json({ message: 'Registro removido com sucesso' });
   } catch (error) {
-    console.error('Erro ao remover registro:', error);
+    console.error('Erro ao processar requisição:', error);
     res.status(500).json({
-      error: {
-        message: 'Erro ao remover registro',
-        details: error.message
-      }
+      error: 'Erro interno do servidor',
+      message: error.message
     });
   }
 });
 
-// Tratamento de rotas não encontradas
+// Rota para rotas não encontradas
 app.use((req, res) => {
   res.status(404).json({
-    error: {
-      message: 'Rota não encontrada',
-      path: req.path
-    }
+    error: 'Rota não encontrada',
+    message: `A rota ${req.path} não existe`
   });
 });
 
 // Middleware de tratamento de erros
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  console.error('Erro não tratado:', err);
   res.status(500).json({
     error: 'Erro interno do servidor',
-    message: process.env.NODE_ENV === 'development' ? err.message : 'Ocorreu um erro inesperado'
+    message: err.message,
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
   });
 });
 
-// Inicializar o servidor
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Servidor rodando na porta ${PORT}`);
-});
-
+// Exporta o app para o Vercel
 module.exports = app;
