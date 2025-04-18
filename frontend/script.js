@@ -3,17 +3,44 @@ const API_URL = '';  // Vazio para usar o mesmo domínio
 
 // Função para carregar os registros
 async function carregarRegistros() {
+  console.log('Iniciando carregamento de registros...');
   try {
+    console.log('Fazendo requisição para /servicos...');
     const response = await fetch(`${API_URL}/servicos`);
+    const contentType = response.headers.get('content-type');
+
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'Erro ao carregar registros');
+      console.error('Erro na resposta:', response.status, response.statusText);
+      const errorData = await response.text();
+      console.error('Resposta de erro completa:', errorData);
+
+      try {
+        const error = contentType?.includes('application/json') ?
+          JSON.parse(errorData) :
+          { message: `Erro ${response.status}: ${response.statusText}` };
+        throw new Error(error.message || 'Erro desconhecido');
+      } catch (parseError) {
+        console.error('Erro ao parsear resposta:', parseError);
+        throw new Error(`Erro ${response.status}: ${response.statusText}`);
+      }
     }
+
+    if (!contentType?.includes('application/json')) {
+      throw new Error('Resposta do servidor não está em formato JSON');
+    }
+
+    console.log('Resposta recebida, convertendo para JSON...');
     const registros = await response.json();
+    console.log(`${registros.length} registros carregados`);
+
+    if (!Array.isArray(registros)) {
+      throw new Error('Formato de resposta inválido: esperava um array de registros');
+    }
+
     atualizarTabela(registros);
   } catch (error) {
-    console.error('Erro ao carregar registros:', error);
-    alert('Erro ao carregar registros. Por favor, tente novamente.');
+    console.error('Erro detalhado:', error);
+    alert(`Erro ao carregar registros: ${error.message}`);
   }
 }
 
@@ -69,36 +96,79 @@ document.getElementById('orcamento').addEventListener('input', function (e) {
 
 // Função para adicionar/editar registro
 async function adicionarRegistro() {
+  console.log('Iniciando adição de registro...');
   const form = document.getElementById('formServico');
   const id = form.dataset.id;
 
+  // Validações dos campos obrigatórios
+  const camposObrigatorios = ['solicitante', 'loja', 'servico', 'orcamento', 'mesServico', 'anoServico'];
+  for (const campo of camposObrigatorios) {
+    const valor = document.getElementById(campo).value;
+    if (!valor || valor.trim() === '') {
+      alert(`Por favor, preencha o campo ${campo}`);
+      return;
+    }
+  }
+
+  // Validar o ano
+  const anoServico = parseInt(document.getElementById('anoServico').value);
+  if (!anoServico || anoServico < 2000 || anoServico > 2100) {
+    alert('Por favor, preencha um ano válido entre 2000 e 2100');
+    return;
+  }
+
+  // Validar o orçamento
+  const orcamento = converterParaNumero(document.getElementById('orcamento').value);
+  if (isNaN(orcamento) || orcamento <= 0) {
+    alert('Por favor, insira um valor válido para o orçamento');
+    return;
+  }
+
   const dados = {
-    solicitante: document.getElementById('solicitante').value,
-    loja: document.getElementById('loja').value,
-    servico: document.getElementById('servico').value,
-    orcamento: converterParaNumero(document.getElementById('orcamento').value),
-    infraSpeak: document.getElementById('InfraSpeak').value,
-    mesServico: document.getElementById('mesServico').value,
-    anoServico: parseInt(document.getElementById('anoServico').value),
-    faturamento: document.getElementById('faturamento').value,
-    situacao: document.getElementById('situacao').value,
-    projetoManutencao: document.getElementById('projetoManutencao').value
+    solicitante: document.getElementById('solicitante').value.trim(),
+    loja: document.getElementById('loja').value.trim(),
+    servico: document.getElementById('servico').value.trim(),
+    orcamento: orcamento,
+    infraSpeak: document.getElementById('InfraSpeak').value.trim(),
+    mesServico: document.getElementById('mesServico').value.trim(),
+    anoServico: anoServico,
+    faturamento: document.getElementById('faturamento').value.trim(),
+    situacao: document.getElementById('situacao').value.trim(),
+    projetoManutencao: document.getElementById('projetoManutencao').value.trim()
   };
 
-  console.log('Enviando dados:', dados);
+  console.log('Dados a serem enviados:', dados);
 
   try {
     const response = await fetch(`${API_URL}/servicos`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
       },
       body: JSON.stringify(id ? { ...dados, id } : dados)
     });
 
+    const contentType = response.headers.get('content-type');
+
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'Erro ao salvar registro');
+      console.error('Erro na resposta:', response.status, response.statusText);
+      const errorData = await response.text();
+      console.error('Resposta de erro completa:', errorData);
+
+      try {
+        const error = contentType?.includes('application/json') ?
+          JSON.parse(errorData) :
+          { message: `Erro ${response.status}: ${response.statusText}` };
+        throw new Error(error.message || 'Erro ao salvar registro');
+      } catch (parseError) {
+        console.error('Erro ao parsear resposta:', parseError);
+        throw new Error(`Erro ${response.status}: ${response.statusText}`);
+      }
+    }
+
+    if (!contentType?.includes('application/json')) {
+      throw new Error('Resposta do servidor não está em formato JSON');
     }
 
     const result = await response.json();
@@ -109,8 +179,8 @@ async function adicionarRegistro() {
     await carregarRegistros();
     alert('Registro salvo com sucesso!');
   } catch (error) {
-    console.error('Erro ao salvar registro:', error);
-    alert(error.message || 'Erro ao salvar registro. Por favor, tente novamente.');
+    console.error('Erro detalhado:', error);
+    alert(`Erro ao salvar registro: ${error.message}`);
   }
 }
 
@@ -143,43 +213,78 @@ async function editarRegistro(id) {
 
 // Função para remover registro
 async function removerRegistro(id) {
+  if (!id || typeof id !== 'number') {
+    console.error('ID inválido para remoção:', id);
+    alert('ID inválido para remoção do registro.');
+    return;
+  }
+
   if (!confirm('Tem certeza que deseja remover este registro?')) return;
 
   try {
     const response = await fetch(`${API_URL}/servicos/${id}`, {
-      method: 'DELETE'
+      method: 'DELETE',
+      headers: {
+        'Accept': 'application/json'
+      }
     });
 
-    if (!response.ok) throw new Error('Erro ao remover registro');
+    if (!response.ok) {
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Erro ao remover registro');
+      } else {
+        throw new Error(`Erro ao remover registro: ${response.status} ${response.statusText}`);
+      }
+    }
 
-    carregarRegistros();
+    await carregarRegistros();
     alert('Registro removido com sucesso!');
   } catch (error) {
     console.error('Erro ao remover registro:', error);
-    alert('Erro ao remover registro. Por favor, tente novamente.');
+    alert(`Erro ao remover registro: ${error.message}`);
   }
 }
 
 // Função para filtrar registros
 function filtrarRegistros() {
-  const solicitante = document.getElementById('filtroSolicitante').value.toLowerCase();
-  const mes = document.getElementById('filtroMes').value;
-  const ano = document.getElementById('filtroAno').value;
-  const situacao = document.getElementById('filtroSituacao').value;
-  const faturamento = document.getElementById('filtroFaturamento').value;
+  try {
+    const solicitante = document.getElementById('filtroSolicitante')?.value?.toLowerCase().trim() ?? '';
+    const mes = document.getElementById('filtroMes')?.value?.trim() ?? '';
+    const ano = document.getElementById('filtroAno')?.value?.trim() ?? '';
+    const situacao = document.getElementById('filtroSituacao')?.value?.trim() ?? '';
+    const faturamento = document.getElementById('filtroFaturamento')?.value?.trim() ?? '';
 
-  const linhas = document.querySelectorAll('#corpoTabela tr');
+    const linhas = document.querySelectorAll('#corpoTabela tr');
+    if (!linhas.length) {
+      console.warn('Nenhuma linha encontrada para filtrar');
+      return;
+    }
 
-  linhas.forEach(linha => {
-    const colunas = linha.querySelectorAll('td');
-    const matchSolicitante = colunas[1].textContent.toLowerCase().includes(solicitante);
-    const matchMes = !mes || colunas[6].textContent.includes(mes);
-    const matchAno = !ano || colunas[6].textContent.includes(ano);
-    const matchSituacao = !situacao || colunas[8].textContent === situacao;
-    const matchFaturamento = !faturamento || colunas[7].textContent === faturamento;
+    linhas.forEach(linha => {
+      try {
+        const colunas = linha.querySelectorAll('td');
+        if (colunas.length < 9) {
+          console.warn('Linha com número incorreto de colunas:', linha);
+          return;
+        }
 
-    linha.style.display = matchSolicitante && matchMes && matchAno && matchSituacao && matchFaturamento ? '' : 'none';
-  });
+        const matchSolicitante = !solicitante || (colunas[1]?.textContent?.toLowerCase()?.includes(solicitante) ?? false);
+        const matchMes = !mes || (colunas[6]?.textContent?.includes(mes) ?? false);
+        const matchAno = !ano || (colunas[6]?.textContent?.includes(ano) ?? false);
+        const matchSituacao = !situacao || (colunas[8]?.textContent === situacao);
+        const matchFaturamento = !faturamento || (colunas[7]?.textContent === faturamento);
+
+        linha.style.display = matchSolicitante && matchMes && matchAno && matchSituacao && matchFaturamento ? '' : 'none';
+      } catch (error) {
+        console.error('Erro ao filtrar linha específica:', error);
+      }
+    });
+  } catch (error) {
+    console.error('Erro ao aplicar filtros:', error);
+    alert('Ocorreu um erro ao aplicar os filtros. Por favor, tente novamente.');
+  }
 }
 
 // Função para limpar filtros
@@ -258,35 +363,67 @@ function imprimirRegistros() {
 
 // Função para exportar registros
 function exportarRegistros() {
-  const linhas = document.querySelectorAll('#corpoTabela tr');
-  let csv = 'ID;Solicitante;Loja;Serviço;Orçamento;InfraSpeak;Mês;Faturamento;Situação;Tipo\n';
-
-  linhas.forEach(linha => {
-    if (linha.style.display !== 'none') {
-      const colunas = linha.querySelectorAll('td');
-      const valores = Array.from(colunas).slice(0, -1).map(col => {
-        let valor = col.textContent.trim();
-        // Remove o símbolo R$ e formata o número para o Excel
-        if (col === colunas[4]) { // Coluna do orçamento
-          valor = valor.replace('R$', '').trim();
-        }
-        // Escapa aspas duplas e envolve o valor em aspas se contiver ponto-e-vírgula
-        if (valor.includes(';')) {
-          valor = `"${valor.replace(/"/g, '""')}"`;
-        }
-        return valor;
-      });
-      csv += valores.join(';') + '\n';
+  try {
+    const linhas = document.querySelectorAll('#corpoTabela tr');
+    if (!linhas.length) {
+      alert('Não há registros para exportar.');
+      return;
     }
-  });
 
-  // Usar BOM para Excel reconhecer caracteres especiais
-  const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
-  const blob = new Blob([bom, csv], { type: 'text/csv;charset=utf-8;' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = 'registros_servicos.csv';
-  link.click();
+    const headers = [
+      'ID', 'Solicitante', 'Loja', 'Serviço', 'Orçamento',
+      'InfraSpeak', 'Mês', 'Faturamento', 'Situação', 'Tipo'
+    ];
+
+    let csv = headers.join(';') + '\n';
+
+    linhas.forEach(linha => {
+      if (linha.style.display !== 'none') {
+        const colunas = linha.querySelectorAll('td');
+        if (colunas.length < headers.length) {
+          console.warn('Linha com número incorreto de colunas:', linha);
+          return;
+        }
+
+        const valores = Array.from(colunas).slice(0, -1).map(col => {
+          let valor = col.textContent?.trim() ?? '';
+
+          // Remove o símbolo R$ e formata o número para o Excel
+          if (valor.includes('R$')) {
+            valor = valor.replace('R$', '').trim();
+            // Converte para formato numérico do Excel (usando ponto como separador decimal)
+            valor = valor.replace(/\./g, '').replace(',', '.');
+          }
+
+          // Escapa aspas duplas e envolve o valor em aspas se contiver caracteres especiais
+          if (valor.includes(';') || valor.includes('"') || valor.includes('\n')) {
+            valor = `"${valor.replace(/"/g, '""')}"`;
+          }
+
+          return valor;
+        });
+
+        csv += valores.join(';') + '\n';
+      }
+    });
+
+    // Usar BOM para Excel reconhecer caracteres especiais
+    const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
+    const blob = new Blob([bom, csv], { type: 'text/csv;charset=utf-8;' });
+    const dataAtual = new Date().toISOString().slice(0, 10);
+    const nomeArquivo = `registros_servicos_${dataAtual}.csv`;
+
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = nomeArquivo;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
+  } catch (error) {
+    console.error('Erro ao exportar registros:', error);
+    alert('Ocorreu um erro ao exportar os registros. Por favor, tente novamente.');
+  }
 }
 
 // Carregar registros quando a página carregar
