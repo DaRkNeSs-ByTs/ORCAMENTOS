@@ -55,8 +55,12 @@ async function carregarRegistros(pagina = 1) {
     }
 
     const contentType = response.headers.get('content-type');
+    console.log('Content-Type recebido:', contentType);
+
     if (!contentType || !contentType.includes('application/json')) {
       console.error('Tipo de conteúdo inesperado:', contentType);
+      const responseText = await response.text();
+      console.error('Conteúdo da resposta:', responseText);
       throw new Error('Resposta não está em formato JSON');
     }
 

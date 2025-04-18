@@ -28,8 +28,9 @@ app.use(express.json({ limit: '10mb' }));
 
 // Middleware para garantir respostas JSON
 app.use((req, res, next) => {
-  res.setHeader('Content-Type', 'application/json');
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Origin', 'https://orcamentos-ochre.vercel.app');
   next();
 });
 
