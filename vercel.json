@@ -13,35 +13,32 @@
   "routes": [
     {
       "src": "/servicos",
-      "methods": [
-        "GET",
-        "POST"
-      ],
-      "dest": "/backend/server.js"
+      "dest": "backend/server.js"
     },
     {
       "src": "/servicos/(.*)",
-      "methods": [
-        "GET",
-        "DELETE"
-      ],
-      "dest": "/backend/server.js"
-    },
-    {
-      "src": "/img/(.*)",
-      "dest": "/frontend/img/$1"
+      "dest": "backend/server.js"
     },
     {
       "src": "/script.js",
-      "dest": "/frontend/script.js"
+      "dest": "frontend/script.js"
     },
     {
       "src": "/style.css",
-      "dest": "/frontend/style.css"
+      "dest": "frontend/style.css"
+    },
+    {
+      "src": "/img/(.*)",
+      "dest": "frontend/img/$1"
     },
     {
       "src": "/(.*)",
-      "dest": "/frontend/index.html"
+      "dest": "frontend/$1",
+      "continue": true
+    },
+    {
+      "src": "/(.*)",
+      "dest": "frontend/index.html"
     }
   ]
 }

@@ -1,5 +1,5 @@
 // URL base da API
-const API_URL = window.location.origin;
+const API_URL = '';  // Vazio para usar o mesmo domínio
 
 // Função para carregar os registros
 async function carregarRegistros() {
