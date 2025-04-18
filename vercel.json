@@ -28,8 +28,16 @@
       "dest": "/backend/server.js"
     },
     {
-      "src": "/(.*)\\.(?:js|css|html|png|jpg|ico|svg)$",
-      "dest": "/frontend/$1.$2"
+      "src": "/img/(.*)",
+      "dest": "/frontend/img/$1"
+    },
+    {
+      "src": "/script.js",
+      "dest": "/frontend/script.js"
+    },
+    {
+      "src": "/style.css",
+      "dest": "/frontend/style.css"
     },
     {
       "src": "/(.*)",
