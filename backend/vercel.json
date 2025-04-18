@@ -8,24 +8,16 @@
   ],
   "routes": [
     {
-      "src": "/servicos",
-      "methods": [
-        "GET"
-      ],
-      "dest": "/server.js"
+      "src": "/api/servicos",
+      "dest": "server.js"
     },
     {
-      "src": "/servicos/(.*)",
-      "methods": [
-        "GET",
-        "POST",
-        "DELETE"
-      ],
-      "dest": "/server.js"
+      "src": "/api/servicos/(.*)",
+      "dest": "server.js"
     },
     {
-      "src": "/(.*)",
-      "dest": "/server.js"
+      "src": "/api/(.*)",
+      "dest": "server.js"
     }
   ],
   "env": {
@@ -33,7 +25,7 @@
   },
   "headers": [
     {
-      "source": "/(.*)",
+      "source": "/api/(.*)",
       "headers": [
         {
           "key": "Access-Control-Allow-Credentials",

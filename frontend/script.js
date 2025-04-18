@@ -4,7 +4,7 @@ const API_URL = (() => {
     return 'http://localhost:3000';
   } else {
     // URL do backend no Vercel
-    return 'https://orcamentos-ochre.vercel.app';
+    return 'https://orcamentos-ochre.vercel.app/api';
   }
 })();
 
