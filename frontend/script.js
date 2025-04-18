@@ -35,7 +35,8 @@ async function carregarRegistros(pagina = 1) {
     console.log('Fazendo requisição para /api/servicos...');
     const response = await fetch(`${API_URL}/servicos?page=${pagina}&limit=${registrosPorPagina}`, {
       headers: {
-        'Accept': 'application/json'
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
       }
     });
 
@@ -43,57 +44,29 @@ async function carregarRegistros(pagina = 1) {
     console.log('Headers da resposta:', Object.fromEntries(response.headers.entries()));
 
     if (!response.ok) {
-      const contentType = response.headers.get('content-type');
-      let errorMessage;
-
-      try {
-        const errorText = await response.text();
-        console.log('Resposta de erro completa:', errorText);
-
-        if (contentType?.includes('application/json')) {
-          const errorData = JSON.parse(errorText);
-          errorMessage = errorData.message || `Erro ${response.status}: ${response.statusText}`;
-        } else {
-          errorMessage = `Erro ${response.status}: ${response.statusText}`;
-        }
-      } catch (parseError) {
-        console.error('Erro ao parsear resposta:', parseError);
-        errorMessage = `Erro ${response.status}: ${response.statusText}`;
-      }
-
-      throw new Error(errorMessage);
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
 
     const contentType = response.headers.get('content-type');
-    if (!contentType?.includes('application/json')) {
-      console.error('Tipo de conteúdo inesperado:', contentType);
-      throw new Error('Resposta do servidor não está em formato JSON');
+    if (!contentType || !contentType.includes('application/json')) {
+      throw new Error('Resposta não está em formato JSON');
     }
 
-    const responseText = await response.text();
-    console.log('Resposta recebida:', responseText);
+    const data = await response.json();
+    console.log('Dados recebidos:', data);
 
-    let registros;
-    try {
-      registros = JSON.parse(responseText);
-    } catch (parseError) {
-      console.error('Erro ao parsear JSON:', parseError);
-      throw new Error('Resposta inválida do servidor');
+    if (!data || !Array.isArray(data.data)) {
+      throw new Error('Formato de dados inválido');
     }
 
-    if (!Array.isArray(registros)) {
-      console.error('Formato de resposta inválido:', registros);
-      throw new Error('Formato de resposta inválido: esperava um array de registros');
-    }
-
-    console.log(`${registros.data.length} registros carregados`);
-    if (!cacheRegistros) cacheRegistros = {};
-    cacheRegistros[pagina] = registros;
+    // Atualiza o cache
+    cacheRegistros = { ...cacheRegistros, [pagina]: data };
     ultimaAtualizacao = agora;
-    atualizarTabela(registros.data);
-    atualizarPaginacao(registros.pagination);
+
+    atualizarTabela(data.data);
+    atualizarPaginacao(data.pagination);
   } catch (error) {
-    console.error('Erro detalhado:', error);
+    console.error('Erro ao carregar registros:', error);
     alert(`Erro ao carregar registros: ${error.message}`);
   } finally {
     if (loadingIndicator) loadingIndicator.style.display = 'none';

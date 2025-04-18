@@ -101,14 +101,22 @@ app.get('/api/servicos', async (req, res) => {
     const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 10));
     const offset = (page - 1) * limit;
 
+    console.log(`Buscando registros - página: ${page}, limite: ${limit}, offset: ${offset}`);
+
     // Busca os dados com paginação
     const { data, error, count } = await supabase
       .from('servicos_view')
       .select('*', { count: 'exact' })
       .range(offset, offset + limit - 1)
-      .order('id', { ascending: false }); // Ordena por ID decrescente
+      .order('id', { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      console.error('Erro ao buscar registros:', error);
+      return res.status(500).json({
+        error: 'Erro ao buscar registros',
+        message: error.message
+      });
+    }
 
     const totalPages = Math.ceil(count / limit);
 
@@ -124,12 +132,10 @@ app.get('/api/servicos', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Erro ao buscar registros:', error);
+    console.error('Erro ao processar requisição:', error);
     res.status(500).json({
-      error: {
-        message: 'Erro ao buscar registros',
-        details: error.message
-      }
+      error: 'Erro interno do servidor',
+      message: error.message
     });
   }
 });
