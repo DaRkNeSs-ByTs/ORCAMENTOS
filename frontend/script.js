@@ -1,5 +1,14 @@
 // URL base da API
-const API_URL = '';  // Vazio para usar o mesmo domínio
+const API_URL = (() => {
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    return 'http://localhost:3000';
+  } else {
+    // URL do seu backend no Vercel
+    return 'https://seu-backend.vercel.app';
+  }
+})();
+
+console.log('API URL configurada:', API_URL);
 
 // Função para carregar os registros
 async function carregarRegistros() {
