@@ -1,228 +1,293 @@
-// Configuração do Supabase
-const supabaseUrl = 'https://dgtqgycqwtnfovdrndnx.supabase.co';  // Substitua com a URL do seu projeto Supabase
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRndHFneWNxd3RuZm92ZHJuZG54Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM4MDg2NDMsImV4cCI6MjA1OTM4NDY0M30.QwvJXzh-KOeR7HYy2nQqaUWpl8cOqYEBtWDaBbvs4og';  // Substitua com a chave da API do seu projeto Supabase
-// Inicializando o Supabase
-const supabase = createClient(supabaseUrl, supabaseKey); // Inicializa o cliente Supabase
+// URL base da API
+const API_URL = window.location.origin + '/api';
 
-// Variáveis globais
-let idContador = 1;
-let registros = [];
-let registrosFiltrados = []; // Para armazenar os registros filtrados
-
-// Função para adicionar ou editar um registro
-async function adicionarRegistro() {
-  const form = document.getElementById("formServico");
-  const id = form.getAttribute("data-id");
-
-  // Obter valores do formulário
-  const solicitante = document.getElementById("solicitante").value.trim();
-  const loja = document.getElementById("loja").value.trim();
-  const servico = document.getElementById("servico").value.trim();
-  const orcamentoInput = document.getElementById("orcamento").value;
-  const orcamento = parseFloat(orcamentoInput.replace("R$", "").replace(/\./g, "").replace(",", ".").trim());
-  const infraSpeak = document.getElementById("InfraSpeak").value.trim();
-  const mesServico = document.getElementById("mesServico").value;
-  const anoServico = document.getElementById("anoServico").value.trim();  // Campo de ano
-  const faturamento = document.getElementById("faturamento").value;
-  const situacao = document.getElementById("situacao").value;
-  const projetoManutencao = document.getElementById("projetoManutencao").value;
-
-  // Validação
-  if (
-    !solicitante ||
-    !loja ||
-    !servico ||
-    isNaN(orcamento) ||
-    orcamento < 0 ||
-    !infraSpeak ||
-    !mesServico ||
-    !anoServico ||
-    isNaN(anoServico) ||
-    anoServico < 2000 ||
-    anoServico > 2100 ||
-    !faturamento ||
-    !situacao ||
-    !projetoManutencao
-  ) {
-    alert(
-      "Por favor, preencha todos os campos obrigatórios corretamente, incluindo o Ano."
-    );
-    return;
+// Função para carregar os registros
+async function carregarRegistros() {
+  try {
+    const response = await fetch(`${API_URL}/servicos`);
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Erro ao carregar registros');
+    }
+    const registros = await response.json();
+    atualizarTabela(registros);
+  } catch (error) {
+    console.error('Erro ao carregar registros:', error);
+    alert('Erro ao carregar registros. Por favor, tente novamente.');
   }
+}
 
-  const novoRegistro = {
-    solicitante,
-    loja,
-    servico,
-    orcamento,
-    infraSpeak,
-    mesServico,
-    anoServico,  // Incluindo o anoServico
-    faturamento,
-    situacao,
-    projetoManutencao,
+// Função para atualizar a tabela
+function atualizarTabela(registros) {
+  const tbody = document.getElementById('corpoTabela');
+  tbody.innerHTML = '';
+
+  registros.forEach(registro => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+            <td>${registro.id}</td>
+            <td>${registro.solicitante}</td>
+            <td>${registro.loja}</td>
+            <td>${registro.servico}</td>
+            <td>${formatarMoeda(registro.orcamento)}</td>
+            <td>${registro.infraSpeak}</td>
+            <td>${registro.mesServico}/${registro.anoServico}</td>
+            <td>${registro.faturamento}</td>
+            <td>${registro.situacao}</td>
+            <td>${registro.projetoManutencao}</td>
+            <td>
+                <button class="editar" onclick="editarRegistro(${registro.id})">Editar</button>
+                <button class="remover" onclick="removerRegistro(${registro.id})">Remover</button>
+            </td>
+        `;
+    tbody.appendChild(tr);
+  });
+}
+
+// Função para formatar número como moeda (apenas para exibição na tabela)
+function formatarMoeda(valor) {
+  return `R$ ${parseFloat(valor).toFixed(2)}`;
+}
+
+// Função para converter string para número
+function converterParaNumero(valor) {
+  return parseFloat(valor) || 0;
+}
+
+// Adicionar evento para permitir apenas números e ponto no campo orçamento
+document.getElementById('orcamento').addEventListener('input', function (e) {
+  let valor = e.target.value;
+  // Permite apenas números e ponto
+  valor = valor.replace(/[^\d.]/g, '');
+  // Garante que só tenha um ponto
+  const pontos = valor.match(/\./g);
+  if (pontos && pontos.length > 1) {
+    valor = valor.substring(0, valor.lastIndexOf('.'));
+  }
+  e.target.value = valor;
+});
+
+// Função para adicionar/editar registro
+async function adicionarRegistro() {
+  const form = document.getElementById('formServico');
+  const id = form.dataset.id;
+
+  const dados = {
+    solicitante: document.getElementById('solicitante').value,
+    loja: document.getElementById('loja').value,
+    servico: document.getElementById('servico').value,
+    orcamento: converterParaNumero(document.getElementById('orcamento').value),
+    infraSpeak: document.getElementById('InfraSpeak').value,
+    mesServico: document.getElementById('mesServico').value,
+    anoServico: parseInt(document.getElementById('anoServico').value),
+    faturamento: document.getElementById('faturamento').value,
+    situacao: document.getElementById('situacao').value,
+    projetoManutencao: document.getElementById('projetoManutencao').value
   };
 
+  console.log('Enviando dados:', dados);
+
   try {
-    let response;
-    if (id) {
-      // Atualizar um registro existente
-      response = await supabase
-        .from('servicos')
-        .update(novoRegistro)
-        .eq('id', id);
+    const response = await fetch(`${API_URL}/servicos`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(id ? { ...dados, id } : dados)
+    });
 
-      if (response.error) throw response.error;
-
-      alert("Registro atualizado com sucesso!");
-    } else {
-      // Adicionar um novo registro
-      response = await supabase
-        .from('servicos')
-        .insert([novoRegistro]);
-
-      if (response.error) throw response.error;
-
-      alert("Registro adicionado com sucesso!");
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Erro ao salvar registro');
     }
 
-    form.reset();
-    form.setAttribute("data-id", "");
-    atualizarTabela();
-    filtrarRegistros();
+    const result = await response.json();
+    console.log('Resposta do servidor:', result);
 
-  } catch (err) {
-    console.error("Erro ao salvar o serviço:", err.message || err);
-    alert(`Erro ao salvar o serviço: ${err.message || err}`);
+    form.reset();
+    form.dataset.id = '';
+    await carregarRegistros();
+    alert('Registro salvo com sucesso!');
+  } catch (error) {
+    console.error('Erro ao salvar registro:', error);
+    alert(error.message || 'Erro ao salvar registro. Por favor, tente novamente.');
   }
 }
 
-// Função para atualizar a tabela principal
-async function atualizarTabela(filtrados = registros) {
-  registrosFiltrados = filtrados;
-  const tbody = document.getElementById("corpoTabela");
-  tbody.innerHTML = "";
+// Função para editar registro
+async function editarRegistro(id) {
+  try {
+    const response = await fetch(`${API_URL}/servicos/${id}`);
+    const registro = await response.json();
+
+    const form = document.getElementById('formServico');
+    form.dataset.id = id;
+
+    document.getElementById('solicitante').value = registro.solicitante;
+    document.getElementById('loja').value = registro.loja;
+    document.getElementById('servico').value = registro.servico;
+    document.getElementById('orcamento').value = formatarMoeda(registro.orcamento);
+    document.getElementById('InfraSpeak').value = registro.infraSpeak;
+    document.getElementById('mesServico').value = registro.mesServico;
+    document.getElementById('anoServico').value = registro.anoServico;
+    document.getElementById('faturamento').value = registro.faturamento;
+    document.getElementById('situacao').value = registro.situacao;
+    document.getElementById('projetoManutencao').value = registro.projetoManutencao;
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  } catch (error) {
+    console.error('Erro ao carregar registro:', error);
+    alert('Erro ao carregar registro. Por favor, tente novamente.');
+  }
+}
+
+// Função para remover registro
+async function removerRegistro(id) {
+  if (!confirm('Tem certeza que deseja remover este registro?')) return;
 
   try {
-    // Pegar os dados do Supabase
-    const { data, error } = await supabase
-      .from('servicos')
-      .select('*');
-
-    if (error) throw error;
-
-    // Atualizar a tabela com os dados
-    data.forEach((registro) => {
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${registro.id}</td>
-        <td>${registro.solicitante}</td>
-        <td>${registro.loja}</td>
-        <td>${registro.servico}</td>
-        <td>${formatarValorMonetario(registro.orcamento)}</td>
-        <td>${registro.infraSpeak}</td>
-        <td>${registro.mesServico} de ${registro.anoServico}</td>
-        <td>${registro.faturamento}</td>
-        <td>${registro.situacao}</td>
-        <td>${registro.projetoManutencao}</td>
-        <td>
-          <button class="editar" onclick="editarRegistro(${registro.id})">Editar</button>
-          <button class="remover" onclick="removerRegistro(${registro.id})">Remover</button>
-        </td>
-      `;
-      tbody.appendChild(tr);
+    const response = await fetch(`${API_URL}/servicos/${id}`, {
+      method: 'DELETE'
     });
-  } catch (err) {
-    console.error("Erro ao carregar os serviços:", err);
-    alert("Erro ao carregar os serviços.");
-  }
-}
 
-// Função para formatar valores monetários
-function formatarValorMonetario(valor) {
-  return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+    if (!response.ok) throw new Error('Erro ao remover registro');
+
+    carregarRegistros();
+    alert('Registro removido com sucesso!');
+  } catch (error) {
+    console.error('Erro ao remover registro:', error);
+    alert('Erro ao remover registro. Por favor, tente novamente.');
+  }
 }
 
 // Função para filtrar registros
 function filtrarRegistros() {
-  const filtroSolicitante = document
-    .getElementById("filtroSolicitante")
-    .value.trim()
-    .toLowerCase();
-  const filtroMes = document.getElementById("filtroMes").value;
-  const filtroAno = document.getElementById("filtroAno").value.trim();
-  const filtroSituacao = document.getElementById("filtroSituacao").value;
-  const filtroFaturamento = document.getElementById("filtroFaturamento").value;
+  const solicitante = document.getElementById('filtroSolicitante').value.toLowerCase();
+  const mes = document.getElementById('filtroMes').value;
+  const ano = document.getElementById('filtroAno').value;
+  const situacao = document.getElementById('filtroSituacao').value;
+  const faturamento = document.getElementById('filtroFaturamento').value;
 
-  const filtrados = registros.filter((registro) => {
-    return (
-      (filtroSolicitante === "" ||
-        registro.solicitante.toLowerCase().includes(filtroSolicitante)) &&
-      (filtroMes === "" || registro.mesServico === filtroMes) &&
-      (filtroAno === "" || registro.anoServico === filtroAno) &&
-      (filtroSituacao === "" || registro.situacao === filtroSituacao) &&
-      (filtroFaturamento === "" || registro.faturamento === filtroFaturamento)
-    );
+  const linhas = document.querySelectorAll('#corpoTabela tr');
+
+  linhas.forEach(linha => {
+    const colunas = linha.querySelectorAll('td');
+    const matchSolicitante = colunas[1].textContent.toLowerCase().includes(solicitante);
+    const matchMes = !mes || colunas[6].textContent.includes(mes);
+    const matchAno = !ano || colunas[6].textContent.includes(ano);
+    const matchSituacao = !situacao || colunas[8].textContent === situacao;
+    const matchFaturamento = !faturamento || colunas[7].textContent === faturamento;
+
+    linha.style.display = matchSolicitante && matchMes && matchAno && matchSituacao && matchFaturamento ? '' : 'none';
   });
-
-  atualizarTabela(filtrados);
 }
 
 // Função para limpar filtros
 function limparFiltros() {
-  document.getElementById("filtroSolicitante").value = "";
-  document.getElementById("filtroMes").value = "";
-  document.getElementById("filtroAno").value = "";
-  document.getElementById("filtroSituacao").value = "";
-  document.getElementById("filtroFaturamento").value = "";
-  atualizarTabela();
+  document.getElementById('filtroSolicitante').value = '';
+  document.getElementById('filtroMes').value = '';
+  document.getElementById('filtroAno').value = '';
+  document.getElementById('filtroSituacao').value = '';
+  document.getElementById('filtroFaturamento').value = '';
+
+  const linhas = document.querySelectorAll('#corpoTabela tr');
+  linhas.forEach(linha => linha.style.display = '');
 }
 
-// Função para editar um registro
-async function editarRegistro(id) {
-  try {
-    const { data, error } = await supabase
-      .from('servicos')
-      .select('*')
-      .eq('id', id)
-      .single();
+// Função para imprimir registros
+function imprimirRegistros() {
+  const tabela = document.querySelector('table').cloneNode(true);
+  const botoes = tabela.querySelectorAll('button');
+  botoes.forEach(botao => botao.remove());
 
-    if (error) throw error;
+  const data = new Date().toLocaleDateString('pt-BR');
+  const hora = new Date().toLocaleTimeString('pt-BR');
 
-    const form = document.getElementById("formServico");
-    form.setAttribute("data-id", data.id);
-    document.getElementById("solicitante").value = data.solicitante;
-    document.getElementById("loja").value = data.loja;
-    document.getElementById("servico").value = data.servico;
-    document.getElementById("orcamento").value = formatarValorMonetario(data.orcamento);
-    document.getElementById("InfraSpeak").value = data.infraSpeak;
-    document.getElementById("mesServico").value = data.mesServico;
-    document.getElementById("anoServico").value = data.anoServico;
-    document.getElementById("faturamento").value = data.faturamento;
-    document.getElementById("situacao").value = data.situacao;
-    document.getElementById("projetoManutencao").value = data.projetoManutencao;
-  } catch (err) {
-    console.error("Erro ao carregar o registro para edição:", err);
-    alert("Erro ao carregar o registro para edição.");
-  }
+  const janela = window.open('', '_blank');
+  janela.document.write(`
+    <html>
+      <head>
+        <title>Registros de Serviços</title>
+        <style>
+          @media print {
+            @page {
+              size: landscape;
+              margin: 1cm;
+            }
+          }
+          body { font-family: Arial, sans-serif; }
+          .header { 
+            text-align: left;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #000;
+            padding-bottom: 10px;
+          }
+          .data-hora {
+            font-size: 12px;
+            color: #666;
+          }
+          table { 
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 12px;
+          }
+          th, td { 
+            border: 1px solid #000;
+            padding: 8px;
+            text-align: left;
+          }
+          th { 
+            background-color: #f0f0f0;
+            font-weight: bold;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="data-hora">${data}, ${hora}</div>
+          <h2>Registros de Serviços</h2>
+        </div>
+        ${tabela.outerHTML}
+      </body>
+    </html>
+  `);
+  janela.document.close();
+  janela.print();
 }
 
-// Função para remover um registro
-async function removerRegistro(id) {
-  if (confirm("Tem certeza que deseja remover este registro?")) {
-    try {
-      const { data, error } = await supabase
-        .from('servicos')
-        .delete()
-        .eq('id', id);
+// Função para exportar registros
+function exportarRegistros() {
+  const linhas = document.querySelectorAll('#corpoTabela tr');
+  let csv = 'ID;Solicitante;Loja;Serviço;Orçamento;InfraSpeak;Mês;Faturamento;Situação;Tipo\n';
 
-      if (error) throw error;
-
-      alert("Registro removido com sucesso!");
-      atualizarTabela();
-    } catch (err) {
-      console.error("Erro ao remover o registro:", err);
-      alert("Erro ao remover o registro.");
+  linhas.forEach(linha => {
+    if (linha.style.display !== 'none') {
+      const colunas = linha.querySelectorAll('td');
+      const valores = Array.from(colunas).slice(0, -1).map(col => {
+        let valor = col.textContent.trim();
+        // Remove o símbolo R$ e formata o número para o Excel
+        if (col === colunas[4]) { // Coluna do orçamento
+          valor = valor.replace('R$', '').trim();
+        }
+        // Escapa aspas duplas e envolve o valor em aspas se contiver ponto-e-vírgula
+        if (valor.includes(';')) {
+          valor = `"${valor.replace(/"/g, '""')}"`;
+        }
+        return valor;
+      });
+      csv += valores.join(';') + '\n';
     }
-  }
+  });
+
+  // Usar BOM para Excel reconhecer caracteres especiais
+  const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
+  const blob = new Blob([bom, csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = 'registros_servicos.csv';
+  link.click();
 }
+
+// Carregar registros quando a página carregar
+document.addEventListener('DOMContentLoaded', carregarRegistros);

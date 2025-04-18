@@ -3,14 +3,24 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Gerenciador de Serviços</title>
+    <meta
+      name="description"
+      content="Sistema de gerenciamento de serviços e orçamentos"
+    />
+    <meta
+      name="keywords"
+      content="orçamentos, serviços, gerenciamento, sistema"
+    />
+    <title>Sistema de Gerenciamento de Serviços - Orçamentos</title>
     <link rel="stylesheet" href="style.css" />
+    <link rel="shortcut icon" href="img/favicon.ico" type="image/x-icon" />
   </head>
   <body>
-    <div class="container">
+    <div class="container" role="main">
       <h1>Gerenciador de Serviços</h1>
 
       <div class="form-container">
+        <img src="img/logo-confiancA.png" alt="Logo" class="logo" />
         <h2>Criar Registro</h2>
         <form id="formServico" data-id="">
           <div class="form-row">
@@ -46,9 +56,11 @@
             <div class="form-group">
               <label for="orcamento">Orçamento:</label>
               <input
-                type="text"
+                type="number"
                 id="orcamento"
                 placeholder="R$ 0,00"
+                step="0.01"
+                min="0"
                 required
               />
             </div>
@@ -115,7 +127,11 @@
               </select>
             </div>
           </div>
-          <button type="button" onclick="adicionarRegistro()">
+          <button
+            type="button"
+            onclick="adicionarRegistro()"
+            aria-label="Adicionar novo registro"
+          >
             Adicionar Registro
           </button>
         </form>
@@ -177,12 +193,34 @@
         </div>
         <!-- Nova linha para os botões -->
         <div class="form-row button-row">
-          <button type="button" onclick="filtrarRegistros()">Filtrar</button>
-          <button type="button" onclick="limparFiltros()">
+          <button
+            type="button"
+            onclick="filtrarRegistros()"
+            aria-label="Aplicar filtros"
+          >
+            Filtrar
+          </button>
+          <button
+            type="button"
+            onclick="limparFiltros()"
+            aria-label="Limpar todos os filtros"
+          >
             Limpar Filtros
           </button>
-          <button type="button" onclick="imprimirRegistros()">Imprimir</button>
-          <button type="button" onclick="exportarRegistros()">Exportar</button>
+          <button
+            type="button"
+            onclick="imprimirRegistros()"
+            aria-label="Imprimir registros"
+          >
+            Imprimir
+          </button>
+          <button
+            type="button"
+            onclick="exportarRegistros()"
+            aria-label="Exportar registros"
+          >
+            Exportar
+          </button>
         </div>
       </div>
 
@@ -210,6 +248,6 @@
     <!-- Div oculta para renderizar a tabela de impressão/exportação -->
     <div id="tabelaImpressao" style="display: none"></div>
 
-    <script src="script.js"></script>
+    <script src="script.js" type="text/javascript"></script>
   </body>
 </html>
